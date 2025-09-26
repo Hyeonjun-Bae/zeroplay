@@ -33,6 +33,28 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
   const router = useRouter();
   const [isBookmarked, setIsBookmarked] = useState(propIsBookmarked || false);
 
+  // 공통 JSON fetch 유틸 (상대경로 + 기본 헤더)
+  const fetchJson = async (url: string, init?: RequestInit) => {
+    const res = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers || {}),
+      },
+      ...init,
+    });
+    const text = await res.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(`응답 파싱 실패: ${text}`);
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${data?.message || res.statusText}`);
+    }
+    return data;
+  };
+
   // 컴포넌트 마운트 시 북마크 상태 확인
   useEffect(() => {
     if (propIsBookmarked === undefined) {
@@ -40,19 +62,16 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
     } else {
       setIsBookmarked(propIsBookmarked);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propIsBookmarked]);
 
   const checkBookmarkStatus = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/benefits/bookmarks/check/${program.id}`, {
-        headers: {
-          'x-user-id': 'anonymous'
-        }
+      const result = await fetchJson(`/api/benefits/bookmarks/check/${program.id}`, {
+        headers: { 'x-user-id': 'anonymous' }
       });
-      const result = await response.json();
-      
-      if (result.success) {
-        setIsBookmarked(result.isBookmarked);
+      if (result?.success) {
+        setIsBookmarked(!!result.isBookmarked);
       }
     } catch (error) {
       console.error('북마크 상태 확인 실패:', error);
@@ -65,29 +84,22 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
     try {
       if (!isBookmarked) {
         // 북마크 추가
-        const response = await fetch('http://localhost:3001/api/benefits/bookmarks', {
+        const res = await fetchJson('/api/benefits/bookmarks', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': 'anonymous'
-          },
+          headers: { 'x-user-id': 'anonymous' },
           body: JSON.stringify({ benefit_id: program.id })
         });
-        
-        if (response.ok) {
+        if (res) {
           setIsBookmarked(true);
           onBookmarkToggle?.(program.id, true);
         }
       } else {
         // 북마크 삭제
-        const response = await fetch(`http://localhost:3001/api/benefits/bookmarks/${program.id}`, {
+        const res = await fetchJson(`/api/benefits/bookmarks/${program.id}`, {
           method: 'DELETE',
-          headers: {
-            'x-user-id': 'anonymous'
-          }
+          headers: { 'x-user-id': 'anonymous' }
         });
-        
-        if (response.ok) {
+        if (res) {
           setIsBookmarked(false);
           onBookmarkToggle?.(program.id, false);
         }

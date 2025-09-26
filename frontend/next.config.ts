@@ -3,11 +3,11 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/photo',
-        destination: 'http://localhost:3001/api/photo',
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:3001/api/:path*',
       },
-    ]
+    ];
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

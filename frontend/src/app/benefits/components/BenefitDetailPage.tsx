@@ -23,7 +23,7 @@ interface BenefitDetailData {
 const BenefitDetailPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
-  const benefitId = params?.id;
+  const benefitId = (params?.id as string) || '';
 
   const [benefit, setBenefit] = useState<BenefitDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,117 +31,121 @@ const BenefitDetailPage: React.FC = () => {
   const [isSafariMobile, setIsSafariMobile] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // 공용 JSON fetch 유틸 (상대경로 + 에러/파싱 가드)
+  const fetchJson = async (url: string, init?: RequestInit) => {
+    const res = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers || {}),
+      },
+      ...init,
+    });
+
+    const text = await res.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(`응답 파싱 실패: ${text}`);
+    }
+
+    if (!res.ok) {
+      const msg = data?.message || res.statusText;
+      throw new Error(`HTTP ${res.status}: ${msg}`);
+    }
+    return data;
+  };
+
   useEffect(() => {
     const checkSafariMobile = () => {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && 
-        /Safari/.test(navigator.userAgent) && 
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+        /Safari/.test(navigator.userAgent) &&
         !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
     };
-    
     setIsSafariMobile(checkSafariMobile());
   }, []);
 
+  // 상세 + 북마크 상태 동시 로드
   useEffect(() => {
-    if (benefitId) {
-      fetchBenefitDetail();
-    }
+    if (!benefitId) return;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const detail = await fetchJson(`/api/benefits/${benefitId}`);
+        if (detail?.success && detail?.data) {
+          setBenefit(detail.data);
+        } else {
+          throw new Error('Invalid response format');
+        }
+
+        const bookmarked = await fetchJson(`/api/benefits/bookmarks/check/${benefitId}`, {
+          headers: { 'x-user-id': 'anonymous' }
+        });
+        if (bookmarked?.success) {
+          setIsBookmarked(!!bookmarked.isBookmarked);
+        } else {
+          setIsBookmarked(false);
+        }
+      } catch (err: any) {
+        console.error('상세/북마크 로드 실패:', err);
+        setError(err?.message || '상세 정보를 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, [benefitId]);
 
-  useEffect(() => {
-  if (benefitId) {
-    fetchBenefitDetail();
-    checkBookmarkStatus();  // 이거 추가
-  }
-}, [benefitId]);
-
-  const fetchBenefitDetail = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch(`http://localhost:3001/api/benefits/${benefitId}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        setBenefit(result.data);
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      console.error('상세 정보 로드 실패:', error);
-      setError('상세 정보를 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
+  const parseDetailedContent = (content: string, isFreeBenefit: boolean) => {
+    if (!content) return { description: '', usageAreas: [] as string[] };
+  
+    const overviewMatch = content.match(/📋 혜택 개요\s*\n([\s\S]*?)(?=\n🎯|$)/);
+    const overviewText = overviewMatch ? overviewMatch[1] : content;
+  
+    if (isFreeBenefit) {
+      const parts = overviewText.split(/- (?:이용|사용) 가능 분야:/);
+      let description = parts[0] ? parts[0].trim() : '';
+      description = description.replace(/^.*?관광지 개요\s*-\s*주요\s*특징:\s*/g, '').trim();
+      description = description.replace(/^- 지원 내용:\s*/, '').trim();
+      const usageText = parts[1] ? parts[1].trim() : '';
+      const usageAreas = usageText
+        .split(/[.,]/)
+        .map(area => area.trim())
+        .filter(area => area.length > 0 && !area.includes('등에서') && !area.includes('등을'))
+        .slice(0, 4);
+      return {
+        description,
+        usageAreas: usageAreas.length > 0 ? usageAreas : ['해변 산책', '일출 감상', '사진 촬영', '바닷길 체험']
+      };
+    } else {
+      let description = overviewText.split('- 사용 가능 분야:')[0].trim();
+      description = description.replace(/^- 지원 내용:\s*/, '').trim();
+      const usageMatch = overviewText.match(/- 사용 가능 분야:\s*([\s\S]*?)$/);
+      const usageText = usageMatch ? usageMatch[1] : '';
+      const usageAreas = usageText
+        .split(/[.,]/)
+        .map(area => area.trim())
+        .filter(area => area.length > 0 && !area.includes('등에서') && !area.includes('등을'))
+        .slice(0, 4);
+      return {
+        description,
+        usageAreas: usageAreas.length > 0 ? usageAreas : ['교통비', '숙박비', '문화시설 이용', '관광지 입장료']
+      };
     }
   };
 
-const parseDetailedContent = (content: string, isFreeBenefit: boolean) => {
-  if (!content) return { description: '', usageAreas: [] };
-  
-  const overviewMatch = content.match(/📋 혜택 개요\s*\n([\s\S]*?)(?=\n🎯|$)/);
-  const overviewText = overviewMatch ? overviewMatch[1] : content;
-  
-  if (isFreeBenefit) {
-  // 무료 타입: "- 이용 가능 분야:" 기준으로 split
-  const parts = overviewText.split(/- (?:이용|사용) 가능 분야:/);
-  
-  // 관광지 개요 부분
-  let description = parts[0] ? parts[0].trim() : '';
-  
-  // "관광지 개요 - 주요 특징:" 부분 완전 제거
-  description = description.replace(/^.*?관광지 개요\s*-\s*주요\s*특징:\s*/g, '').trim();
-  description = description.replace(/^- 지원 내용:\s*/, '').trim();
-  
-  // 이용 가능 분야 부분
-  const usageText = parts[1] ? parts[1].trim() : '';
-  const usageAreas = usageText
-    .split(/[.,]/)
-    .map(area => area.trim())
-    .filter(area => area.length > 0 && !area.includes('등에서') && !area.includes('등을'))
-    .slice(0, 4);
-  
-  return {
-    description,
-    usageAreas: usageAreas.length > 0 ? usageAreas : ['해변 산책', '일출 감상', '사진 촬영', '바닷길 체험']
-  };
-  } else {
-    // 혜택 타입: 기존 로직
-    let description = overviewText.split('- 사용 가능 분야:')[0].trim();
-    description = description.replace(/^- 지원 내용:\s*/, '').trim();
-    
-    const usageMatch = overviewText.match(/- 사용 가능 분야:\s*([\s\S]*?)$/);
-    const usageText = usageMatch ? usageMatch[1] : '';
-    
-    const usageAreas = usageText
-      .split(/[.,]/)
-      .map(area => area.trim())
-      .filter(area => area.length > 0 && !area.includes('등에서') && !area.includes('등을'))
-      .slice(0, 4);
-    
-    return {
-      description,
-      usageAreas: usageAreas.length > 0 ? usageAreas : ['교통비', '숙박비', '문화시설 이용', '관광지 입장료']
-    };
-  }
-};
-  // 신청 자격 파싱 함수
+  // 신청 자격 파싱
   const parseEligibilityDetails = (details: string) => {
     if (!details) return { age: '전 연령', income: '제한 없음', other: '제한 없음' };
-    
-    // 🎯 신청 자격 섹션 추출
     const eligibilityMatch = details.match(/🎯 신청 자격\s*\n([\s\S]*?)(?=\n🔧|$)/);
     const eligibilityText = eligibilityMatch ? eligibilityMatch[1] : details;
-    
-    // 연령, 거주지, 소득 조건 등을 추출
     const ageMatch = eligibilityText.match(/- 연령:\s*([^\n]+)/);
     const residenceMatch = eligibilityText.match(/- 거주지:\s*([^\n]+)/);
     const incomeMatch = eligibilityText.match(/- 소득[^:]*:\s*([^\n]+)/);
-    
     return {
       age: ageMatch?.[1]?.trim() || '만 19세~39세 청년',
       income: incomeMatch?.[1]?.trim() || '소득 제한 없음',
@@ -149,124 +153,72 @@ const parseDetailedContent = (content: string, isFreeBenefit: boolean) => {
     };
   };
 
-  // 신청 방법 파싱 함수
+  // 신청 방법 파싱
   const parseApplicationSteps = (process: string) => {
-  if (!process) return [];
-  
-  const processMatch = process.match(/🔧 신청 방법\s*\n([\s\S]*?)(?=\n⚠️|$)/);
-  const processText = processMatch ? processMatch[1] : process;
-  
-  const steps = processText.match(/\d+\.\s*[^:]+:[^.]*\./g) || [];
-  
-  if (steps.length === 0) {
-    const basicSteps = processText
-      .split(/\n/)
-      .filter(line => line.trim().length > 0 && !line.includes('🔧'))
-      .map(line => line.replace(/^\d+\.\s*/, '').replace(/^-\s*/, '').trim()) // 대시도 제거
-      .slice(0, 4);
-    
-    return basicSteps.length > 0 ? basicSteps : [
-      '운영 시간: 24시간 개방',
-      '주의사항: 설명 따라 밀림 따의 해변 모습이 다르니 방문 전 올때를 확인하는 것이 좋습니다.',
-      '교통편: 성산일출봉 인근에 있어 성산일출봉 입구에서 도보로 쉽게 이동'
-    ];
-  }
-  
-  // 번호와 대시 모두 제거
-  return steps.map(step => step.replace(/^\d+\.\s*/, '').replace(/^-\s*/, '').trim());
-};
+    if (!process) return [];
+    const processMatch = process.match(/🔧 신청 방법\s*\n([\s\S]*?)(?=\n⚠️|$)/);
+    const processText = processMatch ? processMatch[1] : process;
+    const steps = processText.match(/\d+\.\s*[^:]+:[^.]*\./g) || [];
+    if (steps.length === 0) {
+      const basicSteps = processText
+        .split(/\n/)
+        .filter(line => line.trim().length > 0 && !line.includes('🔧'))
+        .map(line => line.replace(/^\d+\.\s*/, '').replace(/^-\s*/, '').trim())
+        .slice(0, 4);
+      return basicSteps.length > 0 ? basicSteps : [
+        '운영 시간: 24시간 개방',
+        '주의사항: 설명 따라 밀림 따의 해변 모습이 다르니 방문 전 올때를 확인하는 것이 좋습니다.',
+        '교통편: 성산일출봉 인근에 있어 성산일출봉 입구에서 도보로 쉽게 이동'
+      ];
+    }
+    return steps.map(step => step.replace(/^\d+\.\s*/, '').replace(/^-\s*/, '').trim());
+  };
 
-  // 주의사항 파싱 함수
+  // 주의사항 파싱
   const parseWarnings = (notes: string) => {
-    if (!notes) return [];
-    
-    // ⚠️ 주의 사항 섹션 추출
+    if (!notes) return [] as string[];
     const warningMatch = notes.match(/⚠️ 주의 사항\s*\n([\s\S]*?)$/);
     const warningText = warningMatch ? warningMatch[1] : notes;
-    
-    // • 또는 - 로 시작하는 항목들 찾기
     const warnings = warningText.match(/[•\-]\s*[^•\-\n]+/g) || [];
-    
     if (warnings.length === 0) {
-      // 기본 문장 분리
       const basicWarnings = warningText
         .split(/[.:]\s*/)
         .filter(warning => warning.trim().length > 10)
         .slice(0, 3);
-      
       return basicWarnings.length > 0 ? basicWarnings.map(w => w.trim()) : [
         '영수증 증빙 필수',
         '지정 업체에서만 사용 가능',
         '유효기간 확인 후 사용'
       ];
     }
-    
     return warnings.map(warning => warning.replace(/^[•\-]\s*/, '').trim());
   };
 
-  const handleGoBack = () => {
-    router.back();
-  };
-
-  const checkBookmarkStatus = async () => {
-  try {
-    const response = await fetch(`http://localhost:3001/api/benefits/bookmarks/check/${benefitId}`, {
-      headers: {
-        'x-user-id': 'anonymous'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      setIsBookmarked(result.isBookmarked);
-    }
-  } catch (error) {
-    console.error('북마크 상태 확인 실패:', error);
-    setIsBookmarked(false);
-  }
-};
+  const handleGoBack = () => router.back();
 
   const handleBookmarkToggle = async () => {
     try {
       if (!isBookmarked) {
-        const response = await fetch('http://localhost:3001/api/benefits/bookmarks', {
+        const res = await fetchJson('/api/benefits/bookmarks', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': 'anonymous'
-          },
+          headers: { 'x-user-id': 'anonymous' },
           body: JSON.stringify({ benefit_id: benefit?.id })
         });
-        
-        if (response.ok) {
-          setIsBookmarked(true);
-        }
+        if (res) setIsBookmarked(true);
       } else {
-        const response = await fetch(`http://localhost:3001/api/benefits/bookmarks/${benefit?.id}`, {
+        const res = await fetchJson(`/api/benefits/bookmarks/${benefit?.id}`, {
           method: 'DELETE',
-          headers: {
-            'x-user-id': 'anonymous'
-          }
+          headers: { 'x-user-id': 'anonymous' }
         });
-        
-        if (response.ok) {
-          setIsBookmarked(false);
-        }
+        if (res) setIsBookmarked(false);
       }
-    } catch (error) {
-      console.error('북마크 처리 중 오류:', error);
+    } catch (err) {
+      console.error('북마크 처리 중 오류:', err);
     }
   };
 
   const handleApply = () => {
-    if (benefit?.website_url) {
-      window.open(benefit.website_url, '_blank');
-    }
+    if (benefit?.website_url) window.open(benefit.website_url, '_blank');
   };
 
   if (loading) {
@@ -288,7 +240,11 @@ const parseDetailedContent = (content: string, isFreeBenefit: boolean) => {
           <div className="text-xl font-bold text-gray-800 mb-2">오류가 발생했습니다</div>
           <div className="text-gray-600 mb-4">{error}</div>
           <button 
-            onClick={fetchBenefitDetail}
+            onClick={() => {
+              // 재시도는 benefitId 의존 useEffect가 처리
+              setLoading(true);
+              setError(null);
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2"
           >
             다시 시도
@@ -382,7 +338,6 @@ const parseDetailedContent = (content: string, isFreeBenefit: boolean) => {
 
             {/* 신청 자격 */}
             <section>
-              {/* 신청 자격 → 입장 자격 */}
               <h2 className="flex items-center text-lg font-semibold mb-3">
                 <span className="mr-2">🏛️</span>
                 {isFreeBenefit ? '입장 자격' : '신청 자격'}
@@ -503,7 +458,7 @@ const parseDetailedContent = (content: string, isFreeBenefit: boolean) => {
           </button>
           <button
             onClick={handleApply}
-            className={`flex-1 h-12 ${isFreeBenefit ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium rounded-lg flex items-center justify-center space-x-2`}
+            className={`flex-1 h-12 ${'bg-blue-500 hover:bg-blue-600'} text-white font-medium rounded-lg flex items-center justify-center space-x-2`}
           >
             <span>{isFreeBenefit ? '이용하기' : '신청하기'}</span>
             <ExternalLink className="w-4 h-4" />

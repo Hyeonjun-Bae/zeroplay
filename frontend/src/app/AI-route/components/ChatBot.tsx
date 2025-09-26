@@ -20,6 +20,46 @@ interface ChatBotProps {
   };
 }
 
+// ✅ 배포/로컬 겸용 API 베이스 URL & 경로 헬퍼
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const withBase = (pathOrUrl: string) => {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;          // 절대 URL 그대로
+  if (pathOrUrl.startsWith('/')) return `${API_BASE}${pathOrUrl}`; // '/api/...' 상대경로
+  return `${API_BASE}/${pathOrUrl}`;
+};
+
+// ✅ 공통 API 호출 함수 (JSON 응답 안전 처리)
+const apiCall = async (url: string, options: RequestInit = {}) => {
+  const finalUrl = withBase(url);
+  try {
+    const res = await fetch(finalUrl, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      ...options,
+    });
+
+    const text = await res.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(`응답 파싱 실패: ${text}`);
+    }
+
+    if (!res.ok) {
+      const msg = data?.message || res.statusText || '요청 실패';
+      throw new Error(`HTTP ${res.status}: ${msg}`);
+    }
+
+    return data;
+  } catch (err) {
+    console.error('💥 API 호출 실패:', err);
+    throw err;
+  }
+};
+
 export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -63,34 +103,25 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
     }
 
     try {
-      // AI API 호출
-      const response = await fetch('http://localhost:3001/api/ai/chat', {
+      // 🔁 AI 채팅 API (하드코딩 제거)
+      const result = await apiCall('/api/ai/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           message: currentInput,
           sessionId: 'session_' + Date.now()
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('AI 응답 실패');
-      }
-
-      const result = await response.json();
-      
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: result.data?.message || '응답을 받을 수 없습니다.',
+        content: result?.data?.message || '응답을 받을 수 없습니다.',
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, botResponse]);
 
-      // 코스 생성 트리거 (특정 키워드가 포함된 경우)
+      // 코스 생성 트리거
       if (currentInput.includes('추천') || currentInput.includes('코스') || currentInput.includes('여행')) {
         setTimeout(async () => {
           await generateTravelRoutes(currentInput);
@@ -114,7 +145,7 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
   const generateTravelRoutes = async (userMessage: string) => {
     try {
       setIsLoading(true);
-      
+
       // props로 전달받은 필터 사용
       const requestFilters = filters || {
         budget: '',
@@ -124,26 +155,17 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
         region: ''
       };
 
-      const response = await fetch('http://localhost:3001/api/ai/generate-routes', {
+      // 🔁 코스 생성 API (하드코딩 제거)
+      const result = await apiCall('/api/ai/generate-routes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           message: userMessage,
           filters: requestFilters,
           sessionId: 'session_' + Date.now()
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('코스 생성 실패');
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.data.routes?.length > 0) {
-        // 각 루트를 개별적으로 전달
+      if (result?.success && result?.data?.routes?.length > 0) {
         result.data.routes.forEach((route: any, index: number) => {
           setTimeout(() => {
             onRouteGenerated?.({
@@ -155,7 +177,7 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
               highlights: route.highlights || [],
               difficulty: route.difficulty || 'easy'
             });
-          }, index * 500); // 각 코스를 0.5초 간격으로 추가
+          }, index * 500);
         });
 
         const successMessage: Message = {
@@ -198,7 +220,6 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
 
   return (
     <div className="h-full bg-white flex flex-col">
-      
       {/* 🔥 메시지 영역 - 하단 여백 크게 증가 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ paddingBottom: '140px' }}>
         {messages.map((message) => (
@@ -212,7 +233,7 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
                 <span className="text-white text-sm">🤖</span>
               </div>
             )}
-            
+
             <div
               className={`max-w-[75%] px-4 py-3 rounded-2xl ${
                 message.type === 'user'
@@ -226,9 +247,9 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
               <span className={`text-xs opacity-70 mt-2 block ${
                 message.type === 'user' ? 'text-right text-blue-100' : 'text-left text-gray-500'
               }`}>
-                {message.timestamp.toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
+                {message.timestamp.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
                 })}
               </span>
             </div>
@@ -249,9 +270,9 @@ export default function ChatBot({ onRouteGenerated, filters }: ChatBotProps) {
             </div>
             <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md border border-gray-200">
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 rounded-full animate-bounce bg-gray-400"></div>
+                <div className="w-2 h-2 rounded-full animate-bounce bg-gray-400" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 rounded-full animate-bounce bg-gray-400" style={{ animationDelay: '0.2s' }}></div>
               </div>
             </div>
           </div>

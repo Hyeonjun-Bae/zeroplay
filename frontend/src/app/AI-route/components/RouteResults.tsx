@@ -29,12 +29,23 @@ interface RouteResultsProps {
   onShareRoute?: (route: RouteRecommendation) => void;
 }
 
+// ✅ 배포/로컬 겸용 API 베이스 URL
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const withBase = (pathOrUrl: string) => {
+  // 이미 절대 URL이면 그대로 사용
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  // '/api/..' 같은 상대 경로에 베이스만 붙여줌
+  if (pathOrUrl.startsWith('/')) return `${API_BASE}${pathOrUrl}`;
+  return `${API_BASE}/${pathOrUrl}`;
+};
+
 // ✅ 안전한 API 호출 함수
 const apiCall = async (url: string, options: RequestInit = {}) => {
   try {
-    console.log(`🔄 API 호출: ${url}`);
+    const finalUrl = withBase(url);
+    console.log(`🔄 API 호출: ${finalUrl}`);
     
-    const response = await fetch(url, {
+    const response = await fetch(finalUrl, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -103,7 +114,7 @@ export default function RouteResults({
         console.log('🗑️ 북마크 삭제 시도...');
         
         // 먼저 북마크 목록을 가져와서 실제 DB ID 확인
-        const bookmarksResponse = await apiCall(`http://localhost:3001/api/bookmarks/ai-routes/${sessionId}`);
+        const bookmarksResponse = await apiCall(`/api/bookmarks/ai-routes/${sessionId}`);
         
         if (bookmarksResponse.success && bookmarksResponse.data) {
           // route_id로 매칭되는 북마크 찾기
@@ -114,7 +125,7 @@ export default function RouteResults({
           if (targetBookmark) {
             console.log('🎯 삭제할 북마크 찾음:', targetBookmark.id);
             
-            const deleteResponse = await apiCall(`http://localhost:3001/api/bookmarks/ai-route/${targetBookmark.id}`, {
+            const deleteResponse = await apiCall(`/api/bookmarks/ai-route/${targetBookmark.id}`, {
               method: 'DELETE',
               body: JSON.stringify({ sessionId }),
             });
@@ -161,7 +172,7 @@ export default function RouteResults({
         
         console.log('📦 전송할 데이터:', routeData);
         
-        const saveResponse = await apiCall('http://localhost:3001/api/bookmarks/ai-route', {
+        const saveResponse = await apiCall('/api/bookmarks/ai-route', {
           method: 'POST',
           body: JSON.stringify(routeData),
         });

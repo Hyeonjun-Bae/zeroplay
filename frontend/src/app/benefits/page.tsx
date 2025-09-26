@@ -38,8 +38,6 @@ const YouthBenefitsPage: React.FC = () => {
   // 탭별로 다른 지역 옵션 반환
   const getRegionOptions = () => {
     const baseRegions = ['서울', '수도권', '강원', '충청', '전라', '경상', '제주'];
-    
-    // 모든 탭에서 전국 제외
     return ['전체', ...baseRegions];
   };
 
@@ -52,19 +50,38 @@ const YouthBenefitsPage: React.FC = () => {
     }
   }, [activeTab]);
 
+  // ✅ 공용: JSON fetch 유틸 (상대경로 + 에러로그)
+  const fetchJson = async (url: string, init?: RequestInit) => {
+    console.log('[API] 요청:', url);
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+      ...init,
+    });
+    console.log('[API] 상태:', res.status);
+
+    const text = await res.text();
+    let data: any;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      console.error('[API] JSON 파싱 실패 원문:', text);
+      throw new Error(`응답 파싱 실패: ${text}`);
+    }
+
+    if (!res.ok) {
+      console.error('[API] 에러응답:', data);
+      const msg = data?.message || res.statusText;
+      throw new Error(`HTTP ${res.status}: ${msg}`);
+    }
+    return data;
+  };
+
   // 전체 데이터는 한 번만 로드
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         console.log('fetchAllData 시작');
-        const response = await fetch('http://localhost:3001/api/benefits');
-        console.log('fetchAllData 응답 상태:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const result = await response.json();
+        const result = await fetchJson('/api/benefits');
         console.log('fetchAllData 결과:', result);
         
         if (result.success && result.data) {
@@ -92,6 +109,7 @@ const YouthBenefitsPage: React.FC = () => {
   // 필터링된 데이터는 필터 변경시마다
   useEffect(() => {
     fetchBenefits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRegion, activeTab]);
 
   const fetchBenefits = async () => {
@@ -101,28 +119,13 @@ const YouthBenefitsPage: React.FC = () => {
       setError(null);
       
       const params = new URLSearchParams();
+      if (selectedRegion !== '전체') params.append('region', selectedRegion);
+      if (activeTab !== '전체') params.append('type', activeTab);
       
-      if (selectedRegion !== '전체') {
-        params.append('region', selectedRegion);
-      }
-      
-      if (activeTab !== '전체') {
-        params.append('type', activeTab);
-      }
-      
-      const url = `http://localhost:3001/api/benefits${params.toString() ? '?' + params.toString() : ''}`;
+      const url = `/api/benefits${params.toString() ? `?${params.toString()}` : ''}`;
       console.log('요청 URL:', url);
       
-      const response = await fetch(url);
-      console.log('응답 상태:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('응답 에러 내용:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
+      const result = await fetchJson(url);
       console.log('받은 데이터:', result);
       
       if (result.success && result.data) {
@@ -138,9 +141,9 @@ const YouthBenefitsPage: React.FC = () => {
         console.error('잘못된 응답 형식:', result);
         throw new Error('Invalid response format');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('fetchBenefits 에러 상세:', error);
-      setError(`데이터를 불러오는데 실패했습니다: ${error}`);
+      setError(`데이터를 불러오는데 실패했습니다: ${error.message || error}`);
       setPrograms([]);
     } finally {
       setLoading(false);
@@ -169,9 +172,7 @@ const YouthBenefitsPage: React.FC = () => {
   const getRegionCount = (region: string): number => {
     if (!allPrograms.length) return 0;
     
-    // 현재 탭에 맞게 데이터 필터링
     let filteredPrograms = allPrograms;
-    
     if (activeTab === '무료') {
       filteredPrograms = allPrograms.filter(p => p.type === 'free' || p.amountType === '무료');
     } else if (activeTab === '혜택') {
@@ -186,7 +187,6 @@ const YouthBenefitsPage: React.FC = () => {
       ).length;
     }
     
-    // 지역 매핑 고려
     const regionMapping: {[key: string]: string[]} = {
       '서울': ['seoul', '서울'],
       '수도권': ['capital_area', 'incheon', 'gyeonggi', '수도권'],
