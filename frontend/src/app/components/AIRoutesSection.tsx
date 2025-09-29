@@ -67,7 +67,7 @@ export default function AIRoutesSection({
             <div 
               key={route.id} 
               className="flex items-center p-4 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => handleRouteClick(route.id)}
+              // onClick={() => handleRouteClick(route.id)}
             >
               {/* 왼쪽 아이콘 */}
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">

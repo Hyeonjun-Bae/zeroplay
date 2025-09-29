@@ -69,7 +69,7 @@ export default function BenefitsSection({
           <div 
             key={benefit.id} 
             className="bg-white rounded-lg p-6 shadow-sm border border-gray-100 min-h-32 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleBenefitClick(benefit.id)}
+            // onClick={() => handleBenefitClick(benefit.id)}
           >
             <div className="flex justify-between items-start mb-4">
               {/* 좌측: 제목 + 카테고리 + 설명 */}

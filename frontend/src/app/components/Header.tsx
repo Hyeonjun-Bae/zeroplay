@@ -18,7 +18,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   title = "ZeroPlay",
-  logoSrc = "/logo.png", // 기본값으로 logo.png 설정
+  logoSrc = "/Logo.png", // 기본값으로 logo.png 설정
   showSearch = true,
   showNotification = true,
   showSettings = true,
@@ -36,11 +36,10 @@ const Header: React.FC<HeaderProps> = ({
         <Image
           src={logoSrc}
           alt={title}
-          width={128}
-          height={128}
-          className="h-10 w-auto"
+          width={70}
+          height={50}
           priority
-          style={{ objectFit: 'contain' }}
+          style={{ width: "auto", height: "auto" }}
         />
       </div>
       
