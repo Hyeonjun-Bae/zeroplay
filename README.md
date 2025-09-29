@@ -1,4 +1,4 @@
-# ZeroPlay - 청년 맞춤형 여행 플랫폼 🗺️
+# ZeroPlay - 청년 맞춤형 여행 플랫폼
 
 <div align="center">
 
@@ -9,9 +9,6 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15.5.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.2-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-2.57.4-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
-
-[데모 보기](#-주요-기능) · [설치 가이드](#-설치-및-실행) · [기술 스택](#-기술-스택) · [팀 소개](#-팀-소개)
 
 </div>
 
@@ -27,7 +24,6 @@
 - **AI 맞춤 추천**: 개인화된 여행 코스 자동 생성
 - **청년 혜택 통합**: 교통비, 숙박비, 문화패스 등 실질적 혜택 정보 제공
 - **로컬딜 연동**: 지역 소상공인과 여행자를 연결하는 특가 정보
-- **원스톱 서비스**: 계획 - 혜택 - 예약 - 기록을 한 곳에서
 
 ---
 
@@ -45,7 +41,6 @@
 
 **주요 기술**
 - OpenAI GPT-3.5 Turbo
-- RAG (Retrieval-Augmented Generation)
 - Semantic Search (Embedding 기반)
 
 ---
@@ -58,7 +53,7 @@
 - **실시간 혜택 정보**: 전국/지역별 청년 지원 프로그램
 - **카테고리별 필터링**: 교통, 숙박, 문화, 쇼핑 등
 - **지역별 검색**: 서울, 수도권, 강원, 충청, 전라, 경상, 제주
-- **북마크 & 알림**: 관심 혜택 저장 및 마감 알림
+- **북마크**: 관심 혜택 저장
 
 **수집 데이터**
 - 청년쉼표 프로젝트 (최대 50만원)
@@ -132,7 +127,7 @@
 
 ---
 
-## 🛠️ 기술 스택
+## 기술 스택
 
 ### Frontend
 - **Framework**: Next.js 15.5.2 (App Router, Turbopack)
