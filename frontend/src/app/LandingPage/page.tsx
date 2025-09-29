@@ -123,7 +123,7 @@ export default function LandingPage() {
       <header className="header fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-200">
         <div className="header-content max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="#" className="flex items-center">
-            <div className="Logo"><Image src="/logo.png" alt="로고" width={70} height={50} style={{ width: 'auto', height: 'auto' }}/>
+            <div className="Logo"><Image src="/Logo.png" alt="로고" width={70} height={50} style={{ width: 'auto', height: 'auto' }}/>
             </div>
           </Link>
           <nav className="header-nav hidden md:flex items-center space-x-8">
