@@ -314,7 +314,7 @@ export default function RouteResults({
           <div key={route.id} className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
             
             {/* 카드 헤더 */}
-            <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white p-4">
+            <div className="bg-gradient-to-br bg-blue-500 text-white p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
@@ -519,7 +519,7 @@ export default function RouteResults({
               <div className="space-y-3">
                 {/* 메인 액션 버튼 */}
                 <button 
-                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-xl hover:shadow-lg transition-all font-bold text-sm shadow-md"
+                  className="w-full bg-gradient-to-r bg-blue-500 text-white py-3 px-4 rounded-xl hover:shadow-lg transition-all font-bold text-sm shadow-md"
                   onClick={() => {
                     showToast('이 코스를 선택하셨습니다!', 'success');
                   }}

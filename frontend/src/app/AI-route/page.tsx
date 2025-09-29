@@ -115,7 +115,7 @@ export default function AIRoutePage() {
         <div className="bg-white border-b border-gray-100 px-4 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+              <div className="w-8 h-8 bg-gradient-to-r bg-blue-500 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white text-lg font-bold">🤖</span>
               </div>
               <div>
@@ -170,7 +170,7 @@ export default function AIRoutePage() {
                   <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-200">
                     <button
                       onClick={() => setActiveTab('chat')}
-                      className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 px-4 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all transform active:scale-95"
+                      className="w-full bg-gradient-to-r bg-blue-500 text-white py-4 px-4 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all transform active:scale-95"
                     >
                       조건 적용하고 AI 추천받기 ✨
                     </button>
@@ -242,7 +242,7 @@ export default function AIRoutePage() {
                     </p>
                     <button
                       onClick={() => setActiveTab('filters')}
-                      className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform active:scale-95"
+                      className="bg-gradient-to-r bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform active:scale-95"
                     >
                       여행 조건 설정하기 🚀
                     </button>
