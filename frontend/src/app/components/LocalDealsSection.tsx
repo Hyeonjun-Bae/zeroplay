@@ -46,7 +46,7 @@ export default function LocalDealsSection({
           <div 
             key={deal.id} 
             className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleDealClick(deal.id)}
+            // onClick={() => handleDealClick(deal.id)}
           >
             {layout === 'card' ? (
               <>
