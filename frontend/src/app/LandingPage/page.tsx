@@ -144,7 +144,7 @@ export default function LandingPage() {
           </div>
           <h1 className="hero-title text-1xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-blue-900 to-blue-300 bg-clip-text text-transparent">
             청년 맞춤형 여행 플랫폼
-            <Image src="/Logo.png" alt="로고" width={350} height={100}  className="-ml-7"style={{ width: 'auto', height: 'auto' }}/>
+            <Image src="/logo.png" alt="로고" width={350} height={100}  className="-ml-7"style={{ width: 'auto', height: 'auto' }}/>
           </h1>
           <p className="hero-subtitle text-xl text-gray-600 mb-4">청년들을 위한 특별한 로컬 여행의 시작</p>
           <p className="hero-description text-gray-500 mb-12 max-w-2xl mx-auto">
